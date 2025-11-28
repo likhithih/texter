@@ -3,11 +3,18 @@ import { Server } from 'socket.io';
 let io = null;
 const onlineUsers = new Map();
 
-export function initSocket(server) {
+export function initSocket(server, allowedOrigins = ['http://localhost:5173']) {
+  const corsOrigins = (Array.isArray(allowedOrigins) && allowedOrigins.length) ? allowedOrigins : ['http://localhost:5173'];
+  console.log('Socket CORS origins:', corsOrigins);
   io = new Server(server, {
     cors: {
-      origin: 'http://localhost:5173',
-      methods: ['GET', 'POST']
+      origin: function(origin, callback) {
+        if (!origin) return callback(null, true);
+        if (corsOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error('CORS not allowed'), false);
+      },
+      methods: ['GET', 'POST'],
+      credentials: true
     }
   });
 
