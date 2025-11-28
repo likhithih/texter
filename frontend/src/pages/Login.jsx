@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import {Link,useNavigate} from "react-router-dom"
 import axios from 'axios'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
+
 function Login(){
 
     const [formData,setData]=useState({
@@ -13,10 +15,10 @@ function Login(){
     const handelSubmit= async (e)=>{
         e.preventDefault();
          try{
-            const response=await axios.post("http://localhost:8001/api/login",formData);
+            const response=await axios.post(`${BACKEND_URL}/api/login`,formData);
             if(response.data.success){
               // Save user and token to localStorage
-              localStorage.setImtem('user', JSON.stringify(response.data.user))
+              localStorage.setItem('user', JSON.stringify(response.data.user))
               if(response.data.token) localStorage.setItem('token', response.data.token)
               alert("Login Successful");
               navigate("/home");

@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import EmojiPicker from 'emoji-picker-react'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
+
 const getStoredUser = () => {
   try {
     const u = localStorage.getItem('user')
@@ -42,7 +44,7 @@ function Home() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get('http://localhost:8001/api/users')
+        const response = await axios.get(`${BACKEND_URL}/api/users`)
         if (response.data.success) {
           setUsers(response.data.users)
         }
@@ -58,7 +60,7 @@ function Home() {
     }
 
     // init socket
-    socketRef.current = io('http://localhost:8001')
+    socketRef.current = io(BACKEND_URL)
     socketRef.current.on('connect', () => {
       socketRef.current.emit('register', currentUser._id)
     })
@@ -89,7 +91,7 @@ function Home() {
         try {
           const currentUser = getStoredUser()
           if (!currentUser) return
-          const response = await axios.get(`http://localhost:8001/api/messages?userId=${currentUser._id}&otherId=${selectedUser._id}`)
+          const response = await axios.get(`${BACKEND_URL}/api/messages?userId=${currentUser._id}&otherId=${selectedUser._id}`)
           if (response.data.success) {
             setMessages(response.data.messages.map(transformMsg))
           }
@@ -117,7 +119,7 @@ function Home() {
     if (!selectedUser || !input.trim()) return
     const currentUser = getStoredUser()
     try {
-      const res = await axios.post('http://localhost:8001/api/messages', {
+      const res = await axios.post(`${BACKEND_URL}/api/messages`, {
         senderId: currentUser._id,
         recipientId: selectedUser._id,
         text: input.trim()
