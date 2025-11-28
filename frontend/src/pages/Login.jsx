@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { FaEye, FaEyeSlash } from 'react-icons/fa'
 import axiosInstance from '../axiosInstance' // import the axios instance
 
 function Login() {
@@ -7,6 +8,7 @@ function Login() {
     email: "",
     password: ""
   })
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handelSubmit = async (e) => {
@@ -72,16 +74,23 @@ function Login() {
                   onChange={(e) => setData({ ...formData, [e.target.name]: e.target.value })}
                 />
               </div>
-              <div>
+              <div className="relative">
                 <label className='text-sm text-slate-900 font-medium mb-2 block'>Password</label>
                 <input
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   className="bg-slate-100 w-full text-sm text-slate-900 px-4 py-3 rounded-md outline-0 border border-gray-200 focus:border-blue-600 focus:bg-transparent"
                   placeholder="Enter Password"
                   onChange={(e) => setData({ ...formData, [e.target.name]: e.target.value })}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-12 transform -translate-y-1/2 text-slate-600 hover:text-slate-900"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center">
