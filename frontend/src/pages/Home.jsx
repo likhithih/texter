@@ -156,19 +156,19 @@ function Home() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <div className={`fixed z-50 inset-0 bg-opacity-30 transition-opacity lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
+      <div className={`fixed z-50 inset-0 bg-opacity-30 transition-opacity lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`} />
       <Sidebar
         users={otherUsers}
         onSelectUser={handleSelectUser}
         onLogout={onLogout}
-        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform lg:relative lg:translate-x-0 z-[60] ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       />
 
       {/* Main content */}
       <main className="flex-1 flex flex-col bg-gray-50 ml-0 lg:ml-64">
         {/* Mobile header */}
         <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-          <button onClick={() => setSidebarOpen(true)} className="text-2xl">☰</button>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-2xl">☰</button>
           <h2 className="text-lg font-bold">Chat App</h2>
           <div />
         </div>
