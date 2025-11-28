@@ -15,11 +15,25 @@ const port= process.env.PORT || 8001
 
 app.use(express.json())
 
-// Support single or comma-separated FRONTEND_URL values
+// Support single or multiple FRONTEND_URL values (comma, semicolon, space separated)
 const frontendEnv = process.env.FRONTEND_URL || '';
+// Accept commas, semicolons, and whitespace as separators
 const parsedFrontendUrls = frontendEnv
-  .split(',')
+  .split(/[\s,;]+/)
   .map(url => url.trim())
+  .filter(Boolean)
+  .map((value) => {
+    try {
+      // Normalize using the URL constructor. If value has no protocol, assume https and let URL normalize it.
+      const normalized = value.match(/^https?:\/\//i) ? value : `https://${value}`;
+      const u = new URL(normalized);
+      // Use origin to exclude paths and queries.
+      return u.origin;
+    } catch (err) {
+      console.warn(`Invalid FRONTEND_URL entry ignored: '${value}'`);
+      return null;
+    }
+  })
   .filter(Boolean);
 const allowedOrigins = [
   'http://localhost:5173', // local frontend
