@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
-import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import EmojiPicker from 'emoji-picker-react'
+import axiosInstance from '../axiosInstance' // configured axios with baseURL & token
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -28,23 +28,32 @@ function Home() {
   const [selectedUser, setSelectedUser] = useState(null)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
-  const inputRef = useRef(null)
   const [users, setUsers] = useState([])
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+  const inputRef = useRef(null)
   const messagesEndRef = useRef(null)
   const socketRef = useRef(null)
   const navigate = useNavigate()
 
+  // Scroll to bottom on new message
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages, selectedUser])
 
+  // Fetch users and initialize socket
   useEffect(() => {
+    const currentUser = getStoredUser()
+    if (!currentUser) {
+      navigate('/')
+      return
+    }
+
     const fetchUsers = async () => {
       try {
-        const response = await axios.get(`${BACKEND_URL}/api/users`)
+        const response = await axiosInstance.get('/api/users')
         if (response.data.success) {
           setUsers(response.data.users)
         }
@@ -53,17 +62,15 @@ function Home() {
       }
     }
 
-    const currentUser = getStoredUser()
-    if (!currentUser) {
-      navigate('/')
-      return
-    }
-
-    // init socket
-    socketRef.current = io(BACKEND_URL)
-    socketRef.current.on('connect', () => {
-      socketRef.current.emit('register', currentUser._id)
+    // Initialize socket connection
+    socketRef.current = io(BACKEND_URL, {
+      auth: { token: localStorage.getItem('token') } // send token for authentication
     })
+
+    socketRef.current.on('connect', () => {
+      console.log('Socket connected:', socketRef.current.id)
+    })
+
     socketRef.current.on('newMessage', (msg) => {
       const t = transformMsg(msg)
       setMessages((prev) => {
@@ -73,6 +80,7 @@ function Home() {
         return prev
       })
     })
+
     socketRef.current.on('messageSent', (msg) => {
       const t = transformMsg(msg)
       setMessages((prev) => [...prev, t])
@@ -83,21 +91,21 @@ function Home() {
     return () => {
       if (socketRef.current) socketRef.current.disconnect()
     }
-  }, [])
+  }, [selectedUser])
 
+  // Fetch messages with selected user
   useEffect(() => {
     const fetchMessages = async () => {
-      if (selectedUser) {
-        try {
-          const currentUser = getStoredUser()
-          if (!currentUser) return
-          const response = await axios.get(`${BACKEND_URL}/api/messages?userId=${currentUser._id}&otherId=${selectedUser._id}`)
-          if (response.data.success) {
-            setMessages(response.data.messages.map(transformMsg))
-          }
-        } catch (error) {
-          console.error('Error fetching messages:', error)
+      if (!selectedUser) return
+      const currentUser = getStoredUser()
+      if (!currentUser) return
+      try {
+        const response = await axiosInstance.get(`/api/messages?userId=${currentUser._id}&otherId=${selectedUser._id}`)
+        if (response.data.success) {
+          setMessages(response.data.messages.map(transformMsg))
         }
+      } catch (error) {
+        console.error('Error fetching messages:', error)
       }
     }
     fetchMessages()
@@ -107,19 +115,11 @@ function Home() {
     setSelectedUser(user)
   }
 
-  const filteredMessages = messages.filter((m) => {
-    const currentUser = getStoredUser()
-    return (
-      (m.senderId === currentUser?._id && m.recipientId === selectedUser?._id) ||
-      (m.senderId === selectedUser?._id && m.recipientId === currentUser?._id)
-    )
-  })
-
   const handleSend = async () => {
     if (!selectedUser || !input.trim()) return
     const currentUser = getStoredUser()
     try {
-      const res = await axios.post(`${BACKEND_URL}/api/messages`, {
+      const res = await axiosInstance.post('/api/messages', {
         senderId: currentUser._id,
         recipientId: selectedUser._id,
         text: input.trim()
@@ -140,11 +140,18 @@ function Home() {
   }
 
   const onLogout = () => {
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
     navigate('/')
   }
 
   const otherUsers = users.filter(user => user._id !== getStoredUser()?._id)
   const currentUser = getStoredUser()
+
+  const filteredMessages = messages.filter((m) =>
+    (m.senderId === currentUser?._id && m.recipientId === selectedUser?._id) ||
+    (m.senderId === selectedUser?._id && m.recipientId === currentUser?._id)
+  )
 
   return (
     <>
@@ -160,10 +167,12 @@ function Home() {
           <div className="border border-slate-200 rounded-lg overflow-hidden flex flex-col h-[70vh] bg-white shadow">
             {selectedUser ? (
               <>
+                {/* Chat header */}
                 <div className="px-4 py-3 border-b border-slate-100 bg-gray-100">
                   <strong className="text-lg text-gray-700">Chat with {selectedUser.name}</strong>
                 </div>
 
+                {/* Messages */}
                 <div className="p-4 flex-1 overflow-auto" data-testid="message-list">
                   {filteredMessages.length === 0 && (
                     <div className="text-center text-sm text-gray-400 my-6">No messages yet — send the first one!</div>
@@ -172,25 +181,12 @@ function Home() {
                   {filteredMessages.map((msg) => {
                     const isSender = msg.senderId === currentUser?._id
                     const len = msg.text?.length || 0
-
-                    // Bubble colors
-                    let bubbleBg = ''
-                    if (isSender) {
-                      if (len <= 20) bubbleBg = 'bg-blue-100 text-black'
-                      else if (len <= 80) bubbleBg = 'bg-blue-200 text-black'
-                      else bubbleBg = 'bg-blue-200 text-black'
-                    } else {
-                      if (len <= 20) bubbleBg = 'bg-gray-100 text-gray-800'
-                      else if (len <= 80) bubbleBg = 'bg-amber-100 text-gray-800'
-                      else bubbleBg = 'bg-amber-200 text-gray-800'
-                    }
+                    let bubbleBg = isSender ? (len <= 20 ? 'bg-blue-100 text-black' : 'bg-blue-200 text-black')
+                      : (len <= 20 ? 'bg-gray-100 text-gray-800' : 'bg-amber-100 text-gray-800')
 
                     return (
                       <div key={msg.id} className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-3`}>
-                        <div
-                          className={`relative px-4 py-2 rounded-xl shadow-sm font-medium ${bubbleBg} max-w-[70%] break-words`}
-                          style={{ width: "fit-content" }}
-                        >
+                        <div className={`relative px-4 py-2 rounded-xl shadow-sm font-medium ${bubbleBg} max-w-[70%] break-words`} style={{ width: 'fit-content' }}>
                           <div className="text-lg">{msg.text}</div>
                           <div className="text-[10px] mt-1 text-gray-400 text-right">
                             {new Date(msg.timestamp).toLocaleTimeString()}
@@ -202,6 +198,7 @@ function Home() {
                   <div ref={messagesEndRef} />
                 </div>
 
+                {/* Input */}
                 <div className="px-4 py-3 border-t border-slate-100 bg-white flex gap-2 items-center relative">
                   <button
                     type="button"
@@ -228,12 +225,11 @@ function Home() {
                             setTimeout(() => {
                               el.focus()
                               const caretPos = start + emoji.length
-                              try { el.setSelectionRange(caretPos, caretPos) } catch (e) {}
+                              try { el.setSelectionRange(caretPos, caretPos) } catch (e) { }
                             }, 0)
                           } else {
                             setInput((prev) => prev + emoji)
                           }
-                          // Do not auto-close the emoji picker here; will close when textarea is focused
                         }}
                       />
                     </div>
