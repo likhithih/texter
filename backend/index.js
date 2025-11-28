@@ -6,10 +6,12 @@ import userRouter from "./routes/user.js"
 import dotenv from "dotenv";
 import cors from "cors";
 import { initSocket } from './socket.js'
+
 dotenv.config()
 
 const app=express()
 const server = http.createServer(app)
+const port= process.env.PORT || 8001
 
 app.use(express.json())
 app.use(cors({
@@ -23,6 +25,6 @@ app.use("/api", userRouter)
 // initialize socket.io with http server
 const io = initSocket(server)
 
-server.listen(process.env.PORT, () => {
+server.listen(port, () => {
     console.log("server is started");
 })
