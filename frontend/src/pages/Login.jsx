@@ -16,7 +16,9 @@ function Login(){
         e.preventDefault();
          try{
         console.log('Login backend URL: ', BACKEND_URL)
-        const response=await axios.post(`${BACKEND_URL}/api/login`,formData);
+        const response=await axios.post(`${BACKEND_URL}/api/login`,formData,{
+          withCredentials: true
+        });
             if(response.data.success){
               // Save user and token to localStorage
               localStorage.setItem('user', JSON.stringify(response.data.user))
