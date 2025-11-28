@@ -9,7 +9,7 @@ export const userLogin= async (req,res)=>{
     const{email,password}= req.body;
     const user = await User.findOne({email});
     if(!user){
-        res.json({success:false,message:"invalid email"})
+        return res.json({success:false,message:"invalid email"})
     }
     
     if(user.password !== password){
