@@ -23,9 +23,11 @@ function Login(){
               // Save user and token to localStorage
               localStorage.setItem('user', JSON.stringify(response.data.user))
               if(response.data.token) localStorage.setItem('token', response.data.token)
+              console.log('Login successful, token stored:', !!response.data.token);
               alert("Login Successful");
               navigate("/home");
             }else{
+                console.log('Login failed, response:', response.data);
                 alert("Login Failed");
             }
          }

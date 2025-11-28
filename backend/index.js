@@ -1,69 +1,44 @@
-import express from "express"
-import http from 'http'
-import mongoose from"mongoose"
-import connectDb from "./db/connecction.js"
-import userRouter from "./routes/user.js"
+import express from "express";
+import http from "http";
 import dotenv from "dotenv";
 import cors from "cors";
-import { initSocket } from './socket.js'
 
-dotenv.config()
+import connectDb from "./db/connecction.js";
+import userRouter from "./routes/user.js";
+import { initSocket } from "./socket.js";
 
-const app=express()
-const server = http.createServer(app)
-const port= process.env.PORT || 8001
+dotenv.config();
 
-app.use(express.json())
+const app = express();
+const server = http.createServer(app);
+const port = process.env.PORT || 8001;
 
-// Support single or multiple FRONTEND_URL values (comma, semicolon, space separated)
-const frontendEnv = process.env.FRONTEND_URL || '';
-// Accept commas, semicolons, and whitespace as separators
-const parsedFrontendUrls = frontendEnv
-  .split(/[\s,;]+/)
-  .map(url => url.trim())
-  .filter(Boolean)
-  .map((value) => {
-    try {
-      // Normalize using the URL constructor. If value has no protocol, assume https and let URL normalize it.
-      const normalized = value.match(/^https?:\/\//i) ? value : `https://${value}`;
-      const u = new URL(normalized);
-      // Use origin to exclude paths and queries.
-      return u.origin;
-    } catch (err) {
-      console.warn(`Invalid FRONTEND_URL entry ignored: '${value}'`);
-      return null;
-    }
-  })
-  .filter(Boolean);
+// Allowed origins
 const allowedOrigins = [
-  'http://localhost:5173', // local frontend
-  ...parsedFrontendUrls
+  "http://localhost:5173",
+  process.env.FRONTEND_URL // single frontend URL from env
 ];
 
-// log the allowed origins so we can verify what's active in production
-console.log('Allowed origins for CORS:', allowedOrigins);
-console.log('FRONTEND_URL env var:', process.env.FRONTEND_URL);
+console.log("Allowed origins for CORS:", allowedOrigins);
 
+app.use(express.json());
 app.use(cors({
-  origin: function(origin, callback) {
-    // allow requests with no origin (like Postman)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    const msg = `The CORS policy for this site does not allow access from the specified Origin.`;
-    return callback(new Error(msg), false);
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("CORS not allowed"), false);
   },
   credentials: true
 }));
 
-connectDb(process.env.MONGO_URL)
+// Connect to MongoDB
+connectDb(process.env.MONGO_URL);
 
-app.use("/api", userRouter)
+// API routes
+app.use("/api", userRouter);
 
-// initialize socket.io with http server - pass allowed origins so socket.js doesn't access env during module import
-const io = initSocket(server, allowedOrigins)
+// Initialize Socket.IO
+const io = initSocket(server, allowedOrigins);
 
 server.listen(port, () => {
-    console.log("server is started");
-})
+  console.log(`Server is running on port ${port}`);
+});
