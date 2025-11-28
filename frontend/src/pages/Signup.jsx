@@ -23,7 +23,7 @@ export default function Signup() {
         e.preventDefault()
 
         try{
-            const response= await axios.post("http://localhost:8001/api/signup",formData)
+            const response= await axios.post(`${BACKEND_URL}/api/signup`, formData)
             console.log(response.data)
             if(response.data.success){
                 alert("Registration Successful")

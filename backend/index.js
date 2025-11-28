@@ -14,10 +14,17 @@ const server = http.createServer(app)
 const port= process.env.PORT || 8001
 
 app.use(express.json())
+
+// Support single or comma-separated FRONTEND_URL values
+const frontendEnv = process.env.FRONTEND_URL || '';
+const parsedFrontendUrls = frontendEnv
+  .split(',')
+  .map(url => url.trim())
+  .filter(Boolean);
 const allowedOrigins = [
-  "http://localhost:5173",           // local frontend
-  process.env.FRONTEND_URL            // deployed frontend
-].filter(Boolean);
+  'http://localhost:5173', // local frontend
+  ...parsedFrontendUrls
+];
 
 // log the allowed origins so we can verify what's active in production
 console.log('Allowed origins for CORS:', allowedOrigins);

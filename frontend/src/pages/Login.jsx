@@ -15,7 +15,8 @@ function Login(){
     const handelSubmit= async (e)=>{
         e.preventDefault();
          try{
-            const response=await axios.post(`${BACKEND_URL}/api/login`,formData);
+        console.log('Login backend URL: ', BACKEND_URL)
+        const response=await axios.post(`${BACKEND_URL}/api/login`,formData);
             if(response.data.success){
               // Save user and token to localStorage
               localStorage.setItem('user', JSON.stringify(response.data.user))
@@ -27,7 +28,17 @@ function Login(){
             }
          }
          catch(err){
-            console.log(err);
+          // show detailed error info
+          console.error('Login error:', err);
+          if (err.response) {
+            console.error('Response error data:', err.response.data)
+            console.error('Response status:', err.response.status)
+          } else if (err.request) {
+            console.error('No response received, request:', err.request)
+          } else {
+            console.error('Error message:', err.message)
+          }
+          alert('Login failed — check console for more details');
          }
     }
     return(
