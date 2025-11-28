@@ -30,6 +30,7 @@ function Home() {
   const [input, setInput] = useState('')
   const [users, setUsers] = useState([])
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const inputRef = useRef(null)
   const messagesEndRef = useRef(null)
@@ -62,9 +63,8 @@ function Home() {
       }
     }
 
-    // Initialize socket connection
     socketRef.current = io(BACKEND_URL, {
-      auth: { token: localStorage.getItem('token') } // send token for authentication
+      auth: { token: localStorage.getItem('token') }
     })
 
     socketRef.current.on('connect', () => {
@@ -113,6 +113,7 @@ function Home() {
 
   const handleSelectUser = (user) => {
     setSelectedUser(user)
+    setSidebarOpen(false) // close sidebar on mobile
   }
 
   const handleSend = async () => {
@@ -147,127 +148,132 @@ function Home() {
 
   const otherUsers = users.filter(user => user._id !== getStoredUser()?._id)
   const currentUser = getStoredUser()
-
   const filteredMessages = messages.filter((m) =>
     (m.senderId === currentUser?._id && m.recipientId === selectedUser?._id) ||
     (m.senderId === selectedUser?._id && m.recipientId === currentUser?._id)
   )
 
   return (
-    <>
-      <Sidebar users={otherUsers} onSelectUser={handleSelectUser} onLogout={onLogout} />
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar */}
+      <div className={`fixed z-50 inset-0 bg-opacity-30 transition-opacity lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
+      <Sidebar
+        users={otherUsers}
+        onSelectUser={handleSelectUser}
+        onLogout={onLogout}
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      />
 
-      <main className="ml-[250px] p-6 h-screen flex flex-col bg-gray-50">
-        <header className="mb-4">
-          <h2 className="text-3xl font-bold text-gray-800">Chat</h2>
-          <p className="text-sm text-gray-500">Click a username in the sidebar to start a conversation.</p>
-        </header>
+      {/* Main content */}
+      <main className="flex-1 flex flex-col bg-gray-50 ml-0 lg:ml-64">
+        {/* Mobile header */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+          <button onClick={() => setSidebarOpen(true)} className="text-2xl">☰</button>
+          <h2 className="text-lg font-bold">Chat App</h2>
+          <div />
+        </div>
 
-        <div className="flex-1 grid grid-cols-1">
-          <div className="border border-slate-200 rounded-lg overflow-hidden flex flex-col h-[70vh] bg-white shadow">
-            {selectedUser ? (
-              <>
-                {/* Chat header */}
-                <div className="px-4 py-3 border-b border-slate-100 bg-gray-100">
-                  <strong className="text-lg text-gray-700">Chat with {selectedUser.name}</strong>
-                </div>
+        <div className="flex-1 p-4 flex flex-col">
+          {selectedUser ? (
+            <div className="flex-1 flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-white shadow">
+              {/* Chat header */}
+              <div className="px-4 py-3 border-b border-slate-100 bg-gray-100 text-lg font-semibold">
+                Chat with {selectedUser.name}
+              </div>
 
-                {/* Messages */}
-                <div className="p-4 flex-1 overflow-auto" data-testid="message-list">
-                  {filteredMessages.length === 0 && (
-                    <div className="text-center text-sm text-gray-400 my-6">No messages yet — send the first one!</div>
-                  )}
-
-                  {filteredMessages.map((msg) => {
-                    const isSender = msg.senderId === currentUser?._id
-                    const len = msg.text?.length || 0
-                    let bubbleBg = isSender ? (len <= 20 ? 'bg-blue-100 text-black' : 'bg-blue-200 text-black')
-                      : (len <= 20 ? 'bg-gray-100 text-gray-800' : 'bg-amber-100 text-gray-800')
-
-                    return (
-                      <div key={msg.id} className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-3`}>
-                        <div className={`relative px-4 py-2 rounded-xl shadow-sm font-medium ${bubbleBg} max-w-[70%] break-words`} style={{ width: 'fit-content' }}>
-                          <div className="text-lg">{msg.text}</div>
-                          <div className="text-[10px] mt-1 text-gray-400 text-right">
-                            {new Date(msg.timestamp).toLocaleTimeString()}
-                          </div>
+              {/* Messages */}
+              <div className="flex-1 p-4 overflow-auto" data-testid="message-list">
+                {filteredMessages.length === 0 && (
+                  <div className="text-center text-sm text-gray-400 my-6">No messages yet — send the first one!</div>
+                )}
+                {filteredMessages.map((msg) => {
+                  const isSender = msg.senderId === currentUser?._id
+                  const len = msg.text?.length || 0
+                  let bubbleBg = isSender ? (len <= 20 ? 'bg-blue-100 text-black' : 'bg-blue-200 text-black')
+                    : (len <= 20 ? 'bg-gray-100 text-gray-800' : 'bg-amber-100 text-gray-800')
+                  return (
+                    <div key={msg.id} className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-3`}>
+                      <div className={`relative px-4 py-2 rounded-xl shadow-sm font-medium ${bubbleBg} max-w-[70%] break-words`} style={{ width: 'fit-content' }}>
+                        <div className="text-lg">{msg.text}</div>
+                        <div className="text-[10px] mt-1 text-gray-400 text-right">
+                          {new Date(msg.timestamp).toLocaleTimeString()}
                         </div>
                       </div>
-                    )
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input */}
-                <div className="px-4 py-3 border-t border-slate-100 bg-white flex gap-2 items-center relative">
-                  <button
-                    type="button"
-                    className="text-2xl leading-none px-3 py-1 rounded hover:bg-gray-100"
-                    onClick={() => setShowEmojiPicker((s) => !s)}
-                    aria-label="Toggle emoji picker"
-                  >
-                    😊
-                  </button>
-
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-[56px] right-20 z-50">
-                      <EmojiPicker
-                        size={32}
-                        onEmojiClick={(emojiData) => {
-                          const emoji = emojiData?.emoji || emojiData?.unified || ''
-                          if (!emoji) return
-                          if (inputRef.current) {
-                            const el = inputRef.current
-                            const start = el.selectionStart
-                            const end = el.selectionEnd
-                            const newText = input.slice(0, start) + emoji + input.slice(end)
-                            setInput(newText)
-                            setTimeout(() => {
-                              el.focus()
-                              const caretPos = start + emoji.length
-                              try { el.setSelectionRange(caretPos, caretPos) } catch (e) { }
-                            }, 0)
-                          } else {
-                            setInput((prev) => prev + emoji)
-                          }
-                        }}
-                      />
                     </div>
-                  )}
-
-                  <textarea
-                    ref={inputRef}
-                    className="w-full rounded-full border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                    placeholder={`Message ${selectedUser.name}...`}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onInput={() => {
-                      if (!inputRef.current) return
-                      const el = inputRef.current
-                      el.style.height = 'auto'
-                      el.style.height = Math.max(el.scrollHeight, 48) + 'px'
-                    }}
-                    rows={1}
-                  />
-
-                  <button
-                    onClick={handleSend}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition"
-                  >
-                    Send
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="p-8 flex-1 flex items-center justify-center text-gray-500 text-center">
-                <div>Select a user from the sidebar to start a chat.</div>
+                  )
+                })}
+                <div ref={messagesEndRef} />
               </div>
-            )}
-          </div>
+
+              {/* Input */}
+              <div className="px-2 py-2 lg:px-4 lg:py-3 border-t border-slate-100 bg-white flex gap-1 lg:gap-2 items-end relative">
+                <button
+                  type="button"
+                  className="text-xl lg:text-2xl leading-none px-2 py-1 lg:px-3 lg:py-1 rounded hover:bg-gray-100"
+                  onClick={() => setShowEmojiPicker((s) => !s)}
+                  aria-label="Toggle emoji picker"
+                >
+                  😊
+                </button>
+
+                {showEmojiPicker && (
+                  <div className="absolute bottom-[56px] right-2 z-50">
+                    <EmojiPicker
+                      size={32}
+                      onEmojiClick={(emojiData) => {
+                        const emoji = emojiData?.emoji || emojiData?.unified || ''
+                        if (!emoji) return
+                        if (inputRef.current) {
+                          const el = inputRef.current
+                          const start = el.selectionStart
+                          const end = el.selectionEnd
+                          const newText = input.slice(0, start) + emoji + input.slice(end)
+                          setInput(newText)
+                          setTimeout(() => {
+                            el.focus()
+                            const caretPos = start + emoji.length
+                            try { el.setSelectionRange(caretPos, caretPos) } catch (e) { }
+                          }, 0)
+                        } else {
+                          setInput((prev) => prev + emoji)
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+
+                <textarea
+                  ref={inputRef}
+                  className="flex-1 rounded-full border px-3 py-2 lg:px-4 lg:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none max-h-12 lg:max-h-none"
+                  placeholder={`Message ${selectedUser.name}...`}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onInput={() => {
+                    if (!inputRef.current) return
+                    const el = inputRef.current
+                    el.style.height = 'auto'
+                    el.style.height = Math.min(Math.max(el.scrollHeight, 32), 96) + 'px' // Limit height on mobile
+                  }}
+                  rows={1}
+                />
+
+                <button
+                  onClick={handleSend}
+                  className="bg-blue-600 text-white px-3 py-2 lg:px-4 lg:py-2 rounded-full hover:bg-blue-700 transition text-sm lg:text-base"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-500 text-center">
+              <div>Select a user from the sidebar to start a chat.</div>
+            </div>
+          )}
         </div>
       </main>
-    </>
+    </div>
   )
 }
 

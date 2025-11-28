@@ -1,7 +1,7 @@
 import React from 'react'
 
 // Sidebar shows total users, clickable user names, and a logout button
-export default function Sidebar({ users = [], onSelectUser, onLogout, selectedUser }) {
+export default function Sidebar({ users = [], onSelectUser, onLogout, selectedUser, className }) {
 
   const handleLogout = () => {
     // Clear stored user and token on logout
@@ -11,7 +11,7 @@ export default function Sidebar({ users = [], onSelectUser, onLogout, selectedUs
   }
 
   return (
-    <nav className="bg-white shadow-md border-r border-gray-200 h-screen fixed top-0 left-0 min-w-[250px] py-6 px-4 overflow-auto flex flex-col">
+    <nav className={`bg-white shadow-md border-r border-gray-200 h-screen fixed top-0 left-0 py-6 px-4 overflow-auto flex flex-col ${className || ''}`}>
       <div className="mb-4">
         <h6 className="text-blue-600 text-sm font-semibold px-4">Users</h6>
         <div className="mt-2 px-4 overflow-y-auto max-h-[70vh]">
