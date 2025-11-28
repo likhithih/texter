@@ -14,9 +14,23 @@ const server = http.createServer(app)
 const port= process.env.PORT || 8001
 
 app.use(express.json())
+const allowedOrigins = [
+  "http://localhost:5173",           // local frontend
+  process.env.FRONTEND_URL            // deployed frontend
+];
+
 app.use(cors({
-    origin:"http://localhost:5173"
-}))
+  origin: function(origin, callback) {
+    // allow requests with no origin (like Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from the specified Origin.`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
 
 connectDb(process.env.MONGO_URL)
 
